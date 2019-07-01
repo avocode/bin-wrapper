@@ -3,15 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const pify = require('pify');
-const importLazy = require('import-lazy')(require);
 
-const binCheck = importLazy('bin-check');
-const binVersionCheck = importLazy('bin-version-check');
-const download = importLazy('download');
-const osFilterObj = importLazy('os-filter-obj');
-
-const statAsync = pify(fs.stat);
-const chmodAsync = pify(fs.chmod);
 
 /**
  * Initialize a new `BinWrapper`
@@ -130,6 +122,8 @@ module.exports = class BinWrapper {
 	 * @api private
 	 */
 	runCheck(cmd) {
+		const binCheck = require('bin-check');
+		const binVersionCheck = require('bin-version-check');
 		return binCheck(this.path(), cmd).then(works => {
 			if (!works) {
 				throw new Error(`The \`${this.path()}\` binary doesn't seem to work correctly`);
@@ -149,6 +143,7 @@ module.exports = class BinWrapper {
 	 * @api private
 	 */
 	findExisting() {
+		const statAsync = pify(fs.stat);
 		return statAsync(this.path()).catch(error => {
 			if (error && error.code === 'ENOENT') {
 				return this.download();
@@ -164,6 +159,7 @@ module.exports = class BinWrapper {
 	 * @api private
 	 */
 	download() {
+		const osFilterObj = require('os-filter-obj');
 		const files = osFilterObj(this.src() || []);
 		const urls = [];
 
@@ -173,6 +169,7 @@ module.exports = class BinWrapper {
 
 		files.forEach(file => urls.push(file.url));
 
+		const download = require('download');
 		return Promise.all(urls.map(url => download(url, this.dest(), {
 			extract: true,
 			strip: this.options.strip
@@ -188,6 +185,7 @@ module.exports = class BinWrapper {
 				return parsedPath.base;
 			}));
 
+			const chmodAsync = pify(fs.chmod);
 			return Promise.all(resultingFiles.map(fileName => {
 				return chmodAsync(path.join(this.dest(), fileName), 0o755);
 			}));
