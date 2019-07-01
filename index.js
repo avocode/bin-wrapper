@@ -4,7 +4,6 @@ const path = require('path');
 const url = require('url');
 const pify = require('pify');
 
-
 /**
  * Initialize a new `BinWrapper`
  *
