@@ -1,8 +1,6 @@
 'use strict';
-const fs = require('fs');
 const path = require('path');
 const url = require('url');
-const pify = require('pify');
 
 /**
  * Initialize a new `BinWrapper`
@@ -96,99 +94,6 @@ module.exports = class BinWrapper {
 	 */
 	path() {
 		return path.join(this.dest(), this.use());
-	}
-
-	/**
-	 * Run
-	 *
-	 * @param {Array} cmd
-	 * @api public
-	 */
-	run(cmd = ['--version']) {
-		return this.findExisting().then(() => {
-			if (this.options.skipCheck) {
-				return;
-			}
-
-			return this.runCheck(cmd);
-		});
-	}
-
-	/**
-	 * Run binary check
-	 *
-	 * @param {Array} cmd
-	 * @api private
-	 */
-	runCheck(cmd) {
-		const binCheck = require('bin-check');
-		const binVersionCheck = require('bin-version-check');
-		return binCheck(this.path(), cmd).then(works => {
-			if (!works) {
-				throw new Error(`The \`${this.path()}\` binary doesn't seem to work correctly`);
-			}
-
-			if (this.version()) {
-				return binVersionCheck(this.path(), this.version());
-			}
-
-			return Promise.resolve();
-		});
-	}
-
-	/**
-	 * Find existing files
-	 *
-	 * @api private
-	 */
-	findExisting() {
-		const statAsync = pify(fs.stat);
-		return statAsync(this.path()).catch(error => {
-			if (error && error.code === 'ENOENT') {
-				return this.download();
-			}
-
-			return Promise.reject(error);
-		});
-	}
-
-	/**
-	 * Download files
-	 *
-	 * @api private
-	 */
-	download() {
-		const osFilterObj = require('os-filter-obj');
-		const files = osFilterObj(this.src() || []);
-		const urls = [];
-
-		if (files.length === 0) {
-			return Promise.reject(new Error('No binary found matching your system. It\'s probably not supported.'));
-		}
-
-		files.forEach(file => urls.push(file.url));
-
-		const download = require('download');
-		return Promise.all(urls.map(url => download(url, this.dest(), {
-			extract: true,
-			strip: this.options.strip
-		}))).then(result => {
-			const resultingFiles = flatten(result.map((item, index) => {
-				if (Array.isArray(item)) {
-					return item.map(file => file.path);
-				}
-
-				const parsedUrl = url.parse(files[index].url);
-				const parsedPath = path.parse(parsedUrl.pathname);
-
-				return parsedPath.base;
-			}));
-
-			const chmodAsync = pify(fs.chmod);
-			return Promise.all(resultingFiles.map(fileName => {
-				return chmodAsync(path.join(this.dest(), fileName), 0o755);
-			}));
-		});
 	}
 };
 
