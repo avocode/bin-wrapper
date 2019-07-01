@@ -1,6 +1,6 @@
 {
 	"name": "@avocode/bin-wrapper",
-	"version": "4.1.0-avocode",
+	"version": "4.1.0-avocode.2",
 	"description": "Binary wrapper that makes your programs seamlessly available as local dependencies",
 	"license": "MIT",
 	"repository": "kevva/bin-wrapper",
